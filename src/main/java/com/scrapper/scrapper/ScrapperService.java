@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Service
 public class ScrapperService {
@@ -84,30 +85,43 @@ public class ScrapperService {
                                     }
                                     Recipe recipe = new Recipe(title, kcal, protein, fat, carbohydrates, fiber);
                                     recipeRepository.save(recipe);
+
+                                    Elements colElements1 = cardContent.select(".col.l8.s12");
+                                    for (Element rows : colElements1) {
+                                        Elements columns1 = rows.select("td:nth-child(1)");
+                                        Elements columns2 = rows.select("td:nth-child(2)");
+
+                                        for (int i = 0; i < columns1.size(); i++) {
+                                            String value1 = columns1.get(i).text();
+                                            String value2 = columns2.get(i).text();
+
+                                            Ingredient ingredient = new Ingredient(value1, value2, recipe);
+                                            ingredientRepository.save(ingredient);
+                                        }
+                                    }
+                                    Elements tags = linkDoc.getElementsByClass("tags-list");
+                                    for (Element tagList : tags) {
+                                        Elements tagElements = tagList.select("li");
+
+                                        for (Element tag : tagElements) {
+                                            String tagText = tag.text();
+                                            Tag existingTag = tagRepository.findByName(tagText);
+
+                                            if (existingTag == null) {
+                                                // Tworzenie nowego taga, jeśli nie istnieje
+                                                Tag newTag = new Tag(tagText);
+                                                tagRepository.save(newTag);
+
+                                                // Dodanie taga do przepisu
+                                                recipe.getTags().add(newTag);
+                                            } else {
+                                                // Dodanie istniejącego taga do przepisu
+                                                recipe.getTags().add(existingTag);
+                                            }
+                                        }
+                                    }
+                                    recipeRepository.save(recipe);
                                 }
-                            Elements colElements1 = cardContent.select(".col.l8.s12");
-                            for (Element row : colElements1) {
-                                Elements columns1 = row.select("td:nth-child(1)");
-                                Elements columns2 = row.select("td:nth-child(2)");
-
-                                for (int i = 0; i < columns1.size(); i++) {
-                                    String value1 = columns1.get(i).text();
-                                    String value2 = columns2.get(i).text();
-
-                                    Ingredient ingredient = new Ingredient(value1, value2);
-                                    ingredientRepository.save(ingredient);
-                                }
-                            }
-                        }
-                    }
-                    Elements tags = linkDoc.getElementsByClass("tags-list");
-                    for (Element tagList : tags) {
-                        Elements tagElements = tagList.select("li");
-
-                        for (Element tag : tagElements) {
-                            String tagText = tag.text();
-                            Tag tagy = new Tag(tagText);
-                            tagRepository.save(tagy);
                         }
                     }
                 }
